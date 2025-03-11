@@ -6,5 +6,12 @@
         "pet_id": 2,
         "pet_name": "Buddy"
     },
-    "sound": "cat_purr.wav"
+    "sounds": [
+        "cat_purr1.wav",
+        "cat_purr2.wav",
+        "cat_purr3.wav",
+        "cat_purr4.wav",
+        "cat_purr5.wav"
+    ]
 }
+

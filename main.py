@@ -3,16 +3,7 @@
 #pip install opencv-python
 #Developed using Python 3.11.9
 
-import asyncio
-import random
-import json
-import cv2
-import numpy as np
-import pygame
-import requests
-import RPi.GPIO as GPIO
-import time
-import pyaudio
+import asyncio, random, json, cv2, numpy as np, pygame, requests, RPi.GPIO as GPIO, time, pyaudio
 
 # Load configuration from JSON file
 with open("config.json", "r") as config_file:
@@ -58,12 +49,13 @@ class ServoAgent:
 
 class SoundAgent:
     pygame.mixer.init()
-    sound = pygame.mixer.Sound(config["sound"])
+    sound_files = config["sounds"]
 
     async def play_randomly(self):
         while True:
             await asyncio.sleep(random.randint(5, 15))  # Play sound randomly
-            self.sound.play()
+            sound = pygame.mixer.Sound(random.choice(self.sound_files))
+            sound.play()
 
 
 class MicrophoneAgent:
