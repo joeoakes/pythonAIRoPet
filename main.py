@@ -52,12 +52,17 @@ class SoundAgent:
     """Randomly plays one of the sound files specified in the config."""
     pygame.mixer.init()
     sound_files = config["sounds"]
+    error_sound = pygame.mixer.Sound("please_connect.wav")
 
     async def play_randomly(self):
         while True:
             await asyncio.sleep(random.randint(5, 15))  # Wait randomly before playing
             sound = pygame.mixer.Sound(random.choice(self.sound_files))
             sound.play()
+
+    def play_error_sound(self):
+        """Play the error sound when payload sending fails."""
+        self.error_sound.play()
 
 
 class MicrophoneAgent:
@@ -80,22 +85,27 @@ class MicrophoneAgent:
 
 
 class PayloadAgent:
-    """Sends a JSON payload when a noise event is detected."""
+    """Sends a JSON payload when a noise or touch event is detected."""
 
-    def send_payload(self):
+    def __init__(self, sound_agent):
+        self.sound_agent = sound_agent
+
+    def send_payload(self, event_type):
         url = config["url"]
         payload = config["payload"]
+        payload["event_type"] = event_type  # Include event type in payload
         try:
             response = requests.post(url, json=payload, timeout=10)
-            print("Payload sent successfully!")
+            print(f"Payload sent successfully for {event_type}!")
         except requests.exceptions.RequestException as error:
-            print("Error sending payload:", error)
+            print(f"Error sending payload for {event_type}:", error)
+            self.sound_agent.play_error_sound()  # Play error sound if payload fails
 
-    async def listen_for_noise(self):
+    async def listen_for_events(self):
         while True:
             message = await message_queue.get()
-            if message == "NOISE_DETECTED":
-                self.send_payload()
+            if message in ["NOISE_DETECTED", "TOUCH"]:
+                self.send_payload(message)
 
 
 async def main():
@@ -104,14 +114,14 @@ async def main():
     servo_agent = ServoAgent()
     sound_agent = SoundAgent()
     microphone_agent = MicrophoneAgent()
-    payload_agent = PayloadAgent()
+    payload_agent = PayloadAgent(sound_agent)
 
     tasks = [
         asyncio.create_task(touch_agent.detect_touch()),
         asyncio.create_task(servo_agent.move_servo()),
         asyncio.create_task(sound_agent.play_randomly()),
         asyncio.create_task(microphone_agent.detect_noise()),
-        asyncio.create_task(payload_agent.listen_for_noise()),
+        asyncio.create_task(payload_agent.listen_for_events()),
     ]
 
     await asyncio.gather(*tasks)
