@@ -14,6 +14,7 @@ message_queue = asyncio.Queue()
 
 
 class TouchAgent:
+    """Detects touch input and sends a message to the queue."""
     GPIO.setmode(GPIO.BCM)
     TOUCH_PIN = 17
     GPIO.setup(TOUCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -26,6 +27,7 @@ class TouchAgent:
 
 
 class ServoAgent:
+    """Moves servos when a touch event is detected."""
     SERVO_PIN1 = 18
     SERVO_PIN2 = 13
     GPIO.setmode(GPIO.BCM)
@@ -48,17 +50,19 @@ class ServoAgent:
 
 
 class SoundAgent:
+    """Randomly plays one of the sound files specified in the config."""
     pygame.mixer.init()
     sound_files = config["sounds"]
 
     async def play_randomly(self):
         while True:
-            await asyncio.sleep(random.randint(5, 15))  # Play sound randomly
+            await asyncio.sleep(random.randint(5, 15))  # Wait randomly before playing
             sound = pygame.mixer.Sound(random.choice(self.sound_files))
             sound.play()
 
 
 class MicrophoneAgent:
+    """Detects noise levels and sends a message when a noise threshold is exceeded."""
     CHUNK = 1024
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
@@ -77,6 +81,8 @@ class MicrophoneAgent:
 
 
 class PayloadAgent:
+    """Sends a JSON payload when a noise event is detected."""
+
     def send_payload(self):
         url = config["url"]
         payload = config["payload"]
@@ -94,6 +100,7 @@ class PayloadAgent:
 
 
 async def main():
+    """Main function to initialize agents and run tasks asynchronously."""
     touch_agent = TouchAgent()
     servo_agent = ServoAgent()
     sound_agent = SoundAgent()
