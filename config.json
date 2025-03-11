@@ -1,0 +1,10 @@
+{
+    "url": "http://192.168.1.236:5000/api/receive",
+    "payload": {
+        "resident_id": 1,
+        "resident_room": "101",
+        "pet_id": 2,
+        "pet_name": "Buddy"
+    },
+    "sound": "cat_purr.wav"
+}

@@ -5,6 +5,7 @@
 
 import asyncio
 import random
+import json
 import cv2
 import numpy as np
 import pygame
@@ -12,6 +13,10 @@ import requests
 import RPi.GPIO as GPIO
 import time
 import pyaudio
+
+# Load configuration from JSON file
+with open("config.json", "r") as config_file:
+    config = json.load(config_file)
 
 # Message queue for inter-agent communication
 message_queue = asyncio.Queue()
@@ -53,7 +58,7 @@ class ServoAgent:
 
 class SoundAgent:
     pygame.mixer.init()
-    sound = pygame.mixer.Sound("cat_purr.wav")
+    sound = pygame.mixer.Sound(config["sound"])
 
     async def play_randomly(self):
         while True:
@@ -81,8 +86,8 @@ class MicrophoneAgent:
 
 class PayloadAgent:
     def send_payload(self):
-        url = "http://192.168.1.236:5000/api/receive"
-        payload = {"resident_id": 1, "resident_room": "101", "pet_id": 2, "pet_name": "Buddy"}
+        url = config["url"]
+        payload = config["payload"]
         try:
             response = requests.post(url, json=payload, timeout=10)
             print("Payload sent successfully!")
