@@ -13,6 +13,8 @@ import pygame
 import requests
 import RPi.GPIO as GPIO
 import time
+import pyaudio
+#pip install RPi.GPIO
 
 # Message queue for inter-agent communication
 message_queue = asyncio.Queue()
@@ -32,7 +34,6 @@ class SonicAgent:
                 await message_queue.put(f"SonicAgent: Object detected at {distance:.2f} cm")
 
             print(f"SonicAgent: Distance = {distance:.2f} cm")
-
 
 class CameraAgent:
     """Asynchronous Camera Agent"""
@@ -70,20 +71,14 @@ class TouchAgent:
     # you may need to change the pull direction.
     GPIO.setup(TOUCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-    print("Monitoring touch sensor. Press Ctrl+C to exit.")
-
-    try:
+    async def detect_object(self):
         while True:
             # If the sensor outputs LOW when touched
-            if GPIO.input(TOUCH_PIN) == GPIO.LOW:
-                print("Touch sensor activated!")
+            if GPIO.input(self.TOUCH_PIN) == GPIO.LOW:
+                await message_queue.put("Touch sensor activated!")
             else:
-                print("Touch sensor inactive.")
+                await message_queue.put("Touch sensor inactive.")
             time.sleep(0.1)  # Short delay for debouncing and to reduce CPU load
-    except KeyboardInterrupt:
-        print("\nExiting program.")
-    finally:
-        GPIO.cleanup()  # Clean up GPIO resources when exiting
 
 class ServoAgent:
     # Define the GPIO pin where the servo is connected
@@ -128,6 +123,44 @@ class ServoAgent:
         pwm2.stop()
         GPIO.cleanup()
 
+class MicrophoneAgent:
+    # Audio configuration
+    CHUNK = 1024  # Number of audio frames per buffer
+    FORMAT = pyaudio.paInt16  # 16-bit resolution
+    CHANNELS = 1  # Mono audio
+    RATE = 44100  # Sampling rate in Hz
+
+    # Initialize PyAudio
+    p = pyaudio.PyAudio()
+
+    # Open an input audio stream on the default USB microphone
+    stream = p.open(format=FORMAT,
+                    channels=CHANNELS,
+                    rate=RATE,
+                    input=True,
+                    frames_per_buffer=CHUNK)
+
+    print("Capturing audio. Press Ctrl+C to stop...")
+
+    try:
+        while True:
+            # Read a chunk of data from the microphone
+            data = stream.read(CHUNK, exception_on_overflow=False)
+            # Convert the byte data into a NumPy array of 16-bit integers
+            audio_data = np.frombuffer(data, dtype=np.int16)
+            # Compute the RMS (root-mean-square) value of the audio data
+            rms = np.sqrt(np.mean(np.square(audio_data)))
+            # Normalize the RMS value relative to the maximum for a 16-bit signal
+            normalized_level = rms / 32768.0
+            print(f"Audio Level: {normalized_level:.2f}")
+    except KeyboardInterrupt:
+        print("\nStopping audio capture.")
+
+    # Clean up the stream and PyAudio instance
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+
 class SoundAgent:
     # Initialize pygame mixer
     pygame.mixer.init()
@@ -168,17 +201,23 @@ class MainController:
         while True:
             message = await message_queue.get()
             print(f"MainController: Received -> {message}")
-
-
 async def main():
-    sonic_agent = SonicAgent()
-    camera_agent = CameraAgent()
+    #sonic_agent = SonicAgent()
+    #camera_agent = CameraAgent()
+    touch_agent = TouchAgent()
+    servo_agent = ServoAgent()
+    microphone_agent = MicrophoneAgent
+    sound_agent = SoundAgent()
+    payload_agent = PayloadAgent()
     controller = MainController()
 
     # Run agents asynchronously
     tasks = [
-        asyncio.create_task(sonic_agent.detect_object()),
-        asyncio.create_task(camera_agent.detect_object()),
+        asyncio.create_task(touch_agent.detect_object()),
+        asyncio.create_task(servo_agent.detect_object()),
+        asyncio.create_task(microphone_agent.detect_object()),
+        asyncio.create_task(sound_agent.detect_object()),
+        asyncio.create_task(payload_agent.detect_object()),
         asyncio.create_task(controller.listen_for_notifications()),
     ]
 
