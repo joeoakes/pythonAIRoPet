@@ -9,10 +9,13 @@ import asyncio
 import random  # Simulating sensor data
 import cv2
 import numpy as np
+import pygame
+import requests
+import RPi.GPIO as GPIO
+import time
 
 # Message queue for inter-agent communication
 message_queue = asyncio.Queue()
-
 
 class SonicAgent:
     """Asynchronous Sonic Sensor Agent"""
@@ -55,6 +58,65 @@ class CameraAgent:
         """Release the camera resource"""
         self.cap.release()
 
+class TouchAgent:
+    # Set up GPIO using BCM numbering
+    GPIO.setmode(GPIO.BCM)
+
+    # Define the GPIO pin connected to the touch sensor (adjust as needed)
+    TOUCH_PIN = 17
+
+    # Configure the sensor pin as an input.
+    # Using a pull-up resistor here; if your sensor outputs HIGH when touched,
+    # you may need to change the pull direction.
+    GPIO.setup(TOUCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+    print("Monitoring touch sensor. Press Ctrl+C to exit.")
+
+    try:
+        while True:
+            # If the sensor outputs LOW when touched
+            if GPIO.input(TOUCH_PIN) == GPIO.LOW:
+                print("Touch sensor activated!")
+            else:
+                print("Touch sensor inactive.")
+            time.sleep(0.1)  # Short delay for debouncing and to reduce CPU load
+    except KeyboardInterrupt:
+        print("\nExiting program.")
+    finally:
+        GPIO.cleanup()  # Clean up GPIO resources when exiting
+
+class SoundAgent:
+    # Initialize pygame mixer
+    pygame.mixer.init()
+    pygame.mixer.music.set_volume(1.0)  # Max volume (range is 0.0 to 1.0)
+
+    # Load sound file
+    sound = pygame.mixer.Sound("cat_purr.wav")  # Replace with your file
+
+    # Play the sound
+    sound.play()
+
+class PayloadAgent:
+    def send_payload(resident_id, resident_room, pet_id, pet_name):
+        # Replace with your web service URL
+        url = "http://192.168.1.236:5000/api/receive"
+
+        # Construct the JSON payload
+        payload = {
+            "resident_id": resident_id,
+            "resident_room": resident_room,
+            "pet_id": pet_id,
+            "pet_name": pet_name
+        }
+
+        try:
+            # Send a POST request with the JSON payload
+            response = requests.post(url, json=payload, timeout=10)
+            response.raise_for_status()  # Raise an error for bad status codes
+            print("Payload successfully sent!")
+            print("Response:", response.json())
+        except requests.exceptions.RequestException as error:
+            print("Error sending payload:", error)
 
 class MainController:
     """Main Controller listening for notifications"""
