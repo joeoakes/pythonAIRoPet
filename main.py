@@ -1,6 +1,5 @@
 #Main Controller: Listens for messages from both agents and takes action when notified.
 #asyncio keeps everything in a single event loop.
-#pip install opencv-python
 #Developed using Python 3.11.9
 
 import asyncio, random, json, cv2, numpy as np, pygame, requests, RPi.GPIO as GPIO, time, pyaudio
